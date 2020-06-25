@@ -29,6 +29,8 @@
  */
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'data/error.dart';
@@ -49,12 +51,13 @@ class PlacesSearchMapSample extends StatefulWidget {
 }
 
 class _PlacesSearchMapSample extends State<PlacesSearchMapSample> {
-  static const String _API_KEY = 'AIzaSyDhrw2ftaTKulF2f-Pl3l2oVo0FTd70wVQ';
+  static const String _API_KEY = '';
 
   static double latitude = 40.7484405;
   static double longitude = -73.9878531;
   static const String baseUrl =
       "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
+  Position _currentPosition;
 
   Completer<GoogleMapController> _controller = Completer();
   static LatLng _center = LatLng(latitude, longitude);
@@ -74,6 +77,14 @@ class _PlacesSearchMapSample extends State<PlacesSearchMapSample> {
 
   List<Marker> markers = <Marker>[];
   final Set<Marker> _markers = {};
+
+
+  @override
+  void initState() {
+    _getCurrentLocation();
+    super.initState();
+  }
+
 
   /// Search nearby places
   void searchNearby(double latitude, double longitude) async {
@@ -157,14 +168,14 @@ class _PlacesSearchMapSample extends State<PlacesSearchMapSample> {
                     child: Container(
                       height: 45,
                       width: 45,
-                      child: FloatingActionButton(onPressed: _onAddMarkerButtonPressed,
+                      child: FloatingActionButton(onPressed: null,
                         backgroundColor: Colors.green[700],
                         materialTapTargetSize: MaterialTapTargetSize.padded,
                         child: Icon(Icons.add_location, size:28),
                       ),
                     ),
                   ),
-                ),
+                )
               ],
             ),
           )
@@ -179,10 +190,6 @@ class _PlacesSearchMapSample extends State<PlacesSearchMapSample> {
         icon: Icon(Icons.restaurant), // 4
       ),
     );
-  }
-
-  void _onCameraMove(CameraPosition position) {
-    _lastMapPosition = position.target;
   }
 
   void _onMapTypeButtonPressed() {
@@ -200,14 +207,11 @@ class _PlacesSearchMapSample extends State<PlacesSearchMapSample> {
       setState(() {
         error = Error.fromJson(data);
       });
-      // success
+
     } else if (data['status'] == "OK") {
       setState(() {
-        // 2
         places = PlaceResponse.parseResults(data['results']);
-        // 3
         for (int i = 0; i < places.length; i++) {
-          // 4
           markers.add(
             Marker(
               markerId: MarkerId(places[i].placeId),
@@ -223,5 +227,21 @@ class _PlacesSearchMapSample extends State<PlacesSearchMapSample> {
     } else {
       print(data);
     }
+  }
+
+  _getCurrentLocation() {
+    final Geolocator geolocator = Geolocator()..forceAndroidLocationManager;
+
+    geolocator
+        .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
+        .then((Position position) {
+      setState(() {
+        _currentPosition = position;
+        latitude = _currentPosition.latitude;
+        longitude = _currentPosition.longitude;
+      });
+    }).catchError((e) {
+      print(e);
+    });
   }
 }
